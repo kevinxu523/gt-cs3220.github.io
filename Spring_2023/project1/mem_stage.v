@@ -44,7 +44,10 @@ module MEM_STAGE(
   // Read from D-MEM  (read code is completed if there is a correct memaddr_MEM ) 
   assign rd_val_MEM = dmem[memaddr_MEM[`DMEMADDRBITS-1:`DMEMWORDBITS]];
 
-  
+  assign from_MEM_to_DE = {wr_reg_MEM, wregno_MEM} ; 
+  wire [`DBITS-1:0] aluout_MEM;
+  wire [`REGNOBITS-1:0] wregno_MEM;
+  wire wr_reg_MEM;
  // Write to D-MEM
   always @ (posedge clk) begin
   if(wr_mem_MEM)
@@ -64,6 +67,9 @@ module MEM_STAGE(
                                 inst_MEM,
                                 PC_MEM,
                                 op_I_MEM,
+                                aluout_MEM,
+                                wregno_MEM,
+                                wr_reg_MEM,
                                 inst_count_MEM
                                  // more signals might need
                                  } = from_AGEX_latch;  
@@ -75,6 +81,9 @@ module MEM_STAGE(
                                 inst_MEM,
                                 PC_MEM,
                                 op_I_MEM,
+                                aluout_MEM,
+                                wregno_MEM,
+                                wr_reg_MEM,
                                 inst_count_MEM
                                         // more signals might need                 
    };

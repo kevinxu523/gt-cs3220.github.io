@@ -30,10 +30,13 @@ module AGEX_STAGE(
   reg br_cond_AGEX; // 1 means a branch condition is satisified. 0 means a branch condition is not satisifed 
 
 
- 
+
  // **TODO: Complete the rest of the pipeline 
- 
-  
+wire [`DBITS-1:0] regval1_AGEX;
+wire [`DBITS-1:0] regval2_AGEX;
+wire [`REGNOBITS-1:0] rd_AGEX;
+wire wr_reg_AGEX;
+wire [`DBITS-1:0]sxt_imm_AGEX;
   always @ (*) begin
     case (op_I_AGEX)
       `BEQ_I : br_cond_AGEX = 1; // write correct code to check the branch condition. 
@@ -48,17 +51,24 @@ module AGEX_STAGE(
     endcase
   end
 
-
+reg [`DBITS-1:0] aluout_AGEX;
+reg [`from_AGEX_to_DE_WIDTH-1:0] agex_de;
+assign from_AGEX_to_DE = {wr_reg_AGEX, rd_AGEX, regval1_AGEX} ; 
  // compute ALU operations  (alu out or memory addresses)
  
   always @ (*) begin
-  /*
+  
   case (op_I_AGEX)
     `ADD_I: 
+      aluout_AGEX = regval1_AGEX + regval2_AGEX;
+    `ADDI_I: begin
+      agex_de = 1;
+      aluout_AGEX = regval1_AGEX + sxt_imm_AGEX;
+      end
        //  ...
 
 	 endcase 
-   */
+   
   end 
 
 // branch target needs to be computed here 
@@ -79,7 +89,12 @@ end
                                   PC_AGEX,
                                   pcplus_AGEX,
                                   op_I_AGEX,
-                                  inst_count_AGEX
+                                  inst_count_AGEX,
+                                  regval1_AGEX,
+                                  regval2_AGEX,
+                                  sxt_imm_AGEX,
+                                  rd_AGEX,
+                                  wr_reg_AGEX
                                           // more signals might need
                                   } = from_DE_latch; 
     
@@ -89,6 +104,9 @@ end
                                 inst_AGEX,
                                 PC_AGEX,
                                 op_I_AGEX,
+                                aluout_AGEX,
+                                rd_AGEX,
+                                wr_reg_AGEX,
                                 inst_count_AGEX
                                        // more signals might need
                                  }; 

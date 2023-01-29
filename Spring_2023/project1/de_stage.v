@@ -197,25 +197,72 @@ always @(*) begin
   case (type_immediate_DE )  
   `I_immediate: 
     sxt_imm_DE = {{21{inst_DE[31]}}, inst_DE[30:25], inst_DE[24:21], inst_DE[20]}; 
-    /*
+    
   `S_immediate: 
-     sxt_imm_DE =  ... 
+     sxt_imm_DE =  {{21{inst_DE[31]}}, inst_DE[30:25], inst_DE[11:8], inst_DE[7]}; 
+    
    `B_immediate: 
-     sxt_imm_DE = ... 
+     sxt_imm_DE =  {{20{inst_DE[31]}}, inst_DE[7], inst_DE[30:25], inst_DE[11:8] , 1'b0}; 
+    
    `U_immediate: 
-     sxt_imm_DE = ... 
+     sxt_imm_DE = {inst_DE[31], inst_DE[30:20], inst_DE[19:12], {12{1'b0}}};
+    
    `J_immediate: 
-    sxt_imm_DE = ... 
-    */ 
+    sxt_imm_DE = {{12{inst_DE[31]}}, inst_DE[19:12] ,inst_DE[20], inst_DE[30:25], inst_DE[24:21] , 1'b0}; 
+    
    default:
     sxt_imm_DE = 32'b0; 
   endcase  
 end 
    wire wr_reg_WB; 
- 
 
 
+wire [`REGNOBITS-1:0] rs1_DE;
+wire [`REGNOBITS-1:0] rs2_DE;
+wire [`REGNOBITS-1:0] rd_DE;
+reg rs1_read_DE;
+reg rs2_read_DE;
 
+assign rs1_DE = inst_DE[19:15];
+assign rs2_DE = inst_DE[24:20];
+assign rd_DE = inst_DE[11:7];
+
+wire [`DBITS-1:0] regval1_DE;
+wire [`DBITS-1:0] regval2_DE;
+
+wire wr_reg_DE;
+
+//assign later stage writes y/n and regno
+reg wr_reg_AGEX = from_AGEX_to_DE[`from_AGEX_to_DE_WIDTH - 1];
+reg[`REGNOBITS -1 : 0] regno_AGEX = from_AGEX_to_DE[`from_AGEX_to_DE_WIDTH - 2: `from_AGEX_to_DE_WIDTH - `REGNOBITS - 1];
+
+reg wr_reg_WB = from_WB_to_DE[`from_WB_to_DE_WIDTH - 1];
+reg[`REGNOBITS -1 : 0] regno_WB = from_WB_to_DE[`from_WB_to_DE_WIDTH - 2: `from_WB_to_DE_WIDTH - `REGNOBITS - 1];
+
+reg wr_reg_MEM = from_MEM_to_DE[`from_MEM_to_DE_WIDTH - 1];
+reg[`REGNOBITS -1 : 0] regno_MEM = from_MEM_to_DE[`from_MEM_to_DE_WIDTH - 2: 0];
+
+always @(*) begin
+  //stall logic here
+  if(wr_reg_AGEX && (regno_AGEX == rd_DE || regno_AGEX == rs1_DE || regno_AGEX == rs2_DE) || 
+     wr_reg_MEM && (regno_MEM == rd_DE || regno_MEM == rs1_DE || regno_MEM == rs2_DE)               ) stall_DE = 1;
+  else if(wr_reg_WB && (regno_WB == rd_DE || regno_WB == rs1_DE || regno_WB == rs2_DE )) stall_DE = 0;
+
+  case (type_I_DE)
+    `I_Type:
+      begin
+        rs1_read_DE = 1;
+        rs2_read_DE = 0;
+      end
+
+  endcase
+
+end
+
+assign regval1_DE = regs[rs1_DE];
+assign regval2_DE = regs[rs2_DE];
+
+assign wr_reg_DE = ((op_I_DE == `ADDI_I) || (op_I_DE == `ADD_I))? 1:0;
  
  /* this signal is passed from WB stage */ 
   wire wr_reg_WB; // is this instruction writing into a register file? 
@@ -226,8 +273,9 @@ end
   // signals come from WB stage for register WB 
   assign { wr_reg_WB, wregno_WB, regval_WB} = from_WB_to_DE;  
 
-
-  wire pipeline_stall_DE; 
+  reg stall_DE; 
+  wire pipeline_stall_DE;
+  assign pipeline_stall_DE = stall_DE;
   assign from_DE_to_FE = {pipeline_stall_DE}; // pass the DE stage stall signal to FE stage 
 
 
@@ -250,7 +298,12 @@ end
                                   PC_DE,
                                   pcplus_DE,
                                   op_I_DE,
-                                  inst_count_DE
+                                  inst_count_DE,
+                                  regval1_DE,
+                                  regval2_DE,
+                                  sxt_imm_DE,
+                                  rd_DE,
+                                  wr_reg_DE
                                   // more signals might need
                                   }; 
 

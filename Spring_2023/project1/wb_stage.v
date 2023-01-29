@@ -23,17 +23,21 @@ module WB_STAGE(
   
   wire [`REGNOBITS-1:0] wregno_WB; // destination register ID 
   wire [`DBITS-1:0] regval_WB;  // the contents to be written in the register file (or CSR )
-  
 
 
   // **TODO: Complete the rest of the pipeline**
- 
-    
+  wire [`DBITS-1:0] aluout_WB;
+  wire [`REGNOBITS-1:0] rd_WB;
+  assign regval_WB = aluout_WB;
+  assign wregno_WB = rd_WB;
    assign {                     
                                 valid_WB,
                                 inst_WB,
                                 PC_WB,
                                 op_I_WB,
+                                aluout_WB,
+                                rd_WB,
+                                wr_reg_WB,
                                 inst_count_WB
                                 // more signals might need                        
                                  } = from_MEM_latch; 
