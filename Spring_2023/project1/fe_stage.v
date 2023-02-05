@@ -1,4 +1,4 @@
- `include "define.vh" 
+  `include "define.vh" 
 
 
 module FE_STAGE(
@@ -71,10 +71,15 @@ module FE_STAGE(
                                 };
 
 
-
+  wire br_cond_AGEX;
+  wire [`INSTBITS-1:0]branch_PC;
+  assign {
+                                br_cond_AGEX,
+                                branch_PC
+  } = from_AGEX_to_FE;
 
   // **TODO: Complete the rest of the pipeline 
-   assign stall_pipe_FE = {from_DE_to_FE};  // you need to modify this line for your design 
+  assign stall_pipe_FE = {from_DE_to_FE}; //|| stall_AGEX || from_MEM_to_FE || from_WB_to_FE};  // you need to modify this line for your design 
 
   always @ (posedge clk) begin
   /* you need to extend this always block */
@@ -86,6 +91,10 @@ module FE_STAGE(
       PC_FE_latch <= pcplus_FE;
       inst_count_FE <= inst_count_FE + 1; 
       end 
+      else if(br_cond_AGEX) begin
+        PC_FE_latch <= branch_PC;// + PC_FE_latch;
+        inst_count_FE <= inst_count_FE + 1; 
+      end
     else 
       PC_FE_latch <= PC_FE_latch;
   end
@@ -101,7 +110,12 @@ module FE_STAGE(
      else  
         begin 
          // this is just an example. you need to expand the contents of if/else
-         if  (stall_pipe_FE) begin 
+         if  (stall_pipe_FE && br_cond_AGEX ) begin //the first stall needs the PC-->FE latch to be firmly latched on branch
+          FE_latch <= FE_latch_contents;
+         end
+         else 
+         if (stall_pipe_FE)
+         begin 
             FE_latch <= FE_latch; 
             inst_count_FE <= inst_count_FE + 1;
             end  

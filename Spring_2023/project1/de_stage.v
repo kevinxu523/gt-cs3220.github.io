@@ -233,20 +233,39 @@ wire [`DBITS-1:0] regval2_DE;
 wire wr_reg_DE;
 
 //assign later stage writes y/n and regno
-reg wr_reg_AGEX = from_AGEX_to_DE[`from_AGEX_to_DE_WIDTH - 1];
+wire [`DBITS-1:0] regval1_AGEX;
+wire [`REGNOBITS-1:0] rd_AGEX;
+wire [`IOPBITS-1:0] op_I_AGEX;
+reg wr_reg_AGEX;
+//reg wr_reg_AGEX = from_AGEX_to_DE[`from_AGEX_to_DE_WIDTH - 1];
 reg[`REGNOBITS -1 : 0] regno_AGEX = from_AGEX_to_DE[`from_AGEX_to_DE_WIDTH - 2: `from_AGEX_to_DE_WIDTH - `REGNOBITS - 1];
+assign{wr_reg_AGEX, rd_AGEX, regval1_AGEX, op_I_AGEX} = from_AGEX_to_DE; 
 
-reg wr_reg_WB = from_WB_to_DE[`from_WB_to_DE_WIDTH - 1];
+
+wire wr_reg_WB; // is this instruction writing into a register file? 
+wire [`REGNOBITS-1:0] wregno_WB; // destination register ID 
+wire [`DBITS-1:0] regval_WB;  // the contents to be written in the register file (or CSR )
+//reg wr_reg_WB = from_WB_to_DE[`from_WB_to_DE_WIDTH - 1];
+wire [`IOPBITS-1:0] op_I_WB;
 reg[`REGNOBITS -1 : 0] regno_WB = from_WB_to_DE[`from_WB_to_DE_WIDTH - 2: `from_WB_to_DE_WIDTH - `REGNOBITS - 1];
 
+wire [`REGNOBITS-1:0] regno_MEM;
+wire wr_reg_MEM;
+wire [`IOPBITS-1:0] op_I_MEM;
+assign {wr_reg_MEM, regno_MEM, op_I_MEM} = from_MEM_to_DE;
 reg wr_reg_MEM = from_MEM_to_DE[`from_MEM_to_DE_WIDTH - 1];
-reg[`REGNOBITS -1 : 0] regno_MEM = from_MEM_to_DE[`from_MEM_to_DE_WIDTH - 2: 0];
+//reg[`REGNOBITS -1 : 0] regno_MEM = from_MEM_to_DE[`from_MEM_to_DE_WIDTH - 2: 0];
 
 always @(*) begin
   //stall logic here
-  if(wr_reg_AGEX && (regno_AGEX == rd_DE || regno_AGEX == rs1_DE || regno_AGEX == rs2_DE) || 
-     wr_reg_MEM && (regno_MEM == rd_DE || regno_MEM == rs1_DE || regno_MEM == rs2_DE)               ) stall_DE = 1;
-  else if(wr_reg_WB && (regno_WB == rd_DE || regno_WB == rs1_DE || regno_WB == rs2_DE )) stall_DE = 0;
+  if( (wr_reg_AGEX && (regno_AGEX == rd_DE || regno_AGEX == rs1_DE || regno_AGEX == rs2_DE)) || 
+      (wr_reg_MEM && (regno_MEM == rd_DE || regno_MEM == rs1_DE || regno_MEM == rs2_DE)) ||
+    (op_I_MEM == `BEQ_I) || (op_I_AGEX == `BEQ_I) || 
+    (op_I_MEM == `BNE_I) || (op_I_AGEX == `BNE_I) ||
+    (op_I_MEM == `BGE_I) || (op_I_AGEX == `BGE_I)
+    ) stall_DE = 1;
+  else if(wr_reg_WB && (regno_WB == rd_DE || regno_WB == rs1_DE || regno_WB == rs2_DE ) 
+          || op_I_WB == `BEQ_I || op_I_WB == `BNE_I || op_I_WB == `BGE_I ) stall_DE = 0;
 
   case (type_I_DE)
     `I_Type:
@@ -271,7 +290,7 @@ assign wr_reg_DE = ((op_I_DE == `ADDI_I) || (op_I_DE == `ADD_I))? 1:0;
 
 
   // signals come from WB stage for register WB 
-  assign { wr_reg_WB, wregno_WB, regval_WB} = from_WB_to_DE;  
+  assign { wr_reg_WB, wregno_WB, regval_WB, op_I_WB} = from_WB_to_DE;  
 
   reg stall_DE; 
   wire pipeline_stall_DE;

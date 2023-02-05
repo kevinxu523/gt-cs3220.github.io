@@ -44,7 +44,7 @@ module MEM_STAGE(
   // Read from D-MEM  (read code is completed if there is a correct memaddr_MEM ) 
   assign rd_val_MEM = dmem[memaddr_MEM[`DMEMADDRBITS-1:`DMEMWORDBITS]];
 
-  assign from_MEM_to_DE = {wr_reg_MEM, wregno_MEM} ; 
+  assign from_MEM_to_DE = {wr_reg_MEM, wregno_MEM, op_I_MEM} ; 
   wire [`DBITS-1:0] aluout_MEM;
   wire [`REGNOBITS-1:0] wregno_MEM;
   wire wr_reg_MEM;

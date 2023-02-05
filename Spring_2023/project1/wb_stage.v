@@ -30,6 +30,12 @@ module WB_STAGE(
   wire [`REGNOBITS-1:0] rd_WB;
   assign regval_WB = aluout_WB;
   assign wregno_WB = rd_WB;
+  reg validval;
+  assign valid_WB = validval;
+  always @(*) begin
+    if (op_I_WB != 37 && op_I_WB != 0 && inst_WB < 'hFFFF) assign validval = 1;
+    else assign validval =0;
+  end
    assign {                     
                                 valid_WB,
                                 inst_WB,
@@ -48,7 +54,7 @@ module WB_STAGE(
 
 
 // we send register write (and CSR register) information to DE stage 
-assign from_WB_to_DE = {wr_reg_WB, wregno_WB, regval_WB} ;  
+assign from_WB_to_DE = {wr_reg_WB, wregno_WB, regval_WB, op_I_WB} ;  
 
 // this code need to be commented out when we synthesize the code later 
     // special workaround to get tests Pass/Fail status

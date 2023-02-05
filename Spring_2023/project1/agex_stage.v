@@ -29,21 +29,32 @@ module AGEX_STAGE(
   wire [`IOPBITS-1:0] op_I_AGEX;
   reg br_cond_AGEX; // 1 means a branch condition is satisified. 0 means a branch condition is not satisifed 
 
-
+  wire [`INSTBITS-1:0]branch_PC;
+  assign from_AGEX_to_FE = {
+                                br_cond_AGEX,
+                                branch_PC
+  };
+  assign branch_PC = sxt_imm_AGEX + PC_AGEX;
 
  // **TODO: Complete the rest of the pipeline 
 wire [`DBITS-1:0] regval1_AGEX;
 wire [`DBITS-1:0] regval2_AGEX;
+reg signed [`DBITS-1:0] regval1_AGEX_signed;
+reg signed [`DBITS-1:0] regval2_AGEX_signed;
 wire [`REGNOBITS-1:0] rd_AGEX;
 wire wr_reg_AGEX;
 wire [`DBITS-1:0]sxt_imm_AGEX;
   always @ (*) begin
+    regval1_AGEX_signed = regval1_AGEX;
+    regval2_AGEX_signed = regval2_AGEX;
     case (op_I_AGEX)
-      `BEQ_I : br_cond_AGEX = 1; // write correct code to check the branch condition. 
+      `BEQ_I :  br_cond_AGEX = (regval1_AGEX == regval2_AGEX); // write correct code to check the branch condition. 
+      
+      `BNE_I : br_cond_AGEX = (regval1_AGEX != regval2_AGEX); // write correct code to check the branch condition. 
+
+      //`BLT_I : ...
+      `BGE_I : br_cond_AGEX = (regval1_AGEX_signed >= regval2_AGEX_signed);  //used the signed reg for negatives
       /*
-      `BNE_I : ...
-      `BLT_I : ...
-      `BGE_I : ...
       `BLTU_I: ..
       `BGEU_I : ...
       */
@@ -53,7 +64,7 @@ wire [`DBITS-1:0]sxt_imm_AGEX;
 
 reg [`DBITS-1:0] aluout_AGEX;
 reg [`from_AGEX_to_DE_WIDTH-1:0] agex_de;
-assign from_AGEX_to_DE = {wr_reg_AGEX, rd_AGEX, regval1_AGEX} ; 
+assign from_AGEX_to_DE = {wr_reg_AGEX, rd_AGEX, regval1_AGEX, op_I_AGEX} ; 
  // compute ALU operations  (alu out or memory addresses)
  
   always @ (*) begin
@@ -65,11 +76,16 @@ assign from_AGEX_to_DE = {wr_reg_AGEX, rd_AGEX, regval1_AGEX} ;
       agex_de = 1;
       aluout_AGEX = regval1_AGEX + sxt_imm_AGEX;
       end
+    `AUIPC_I:
+      aluout_AGEX = PC_AGEX + (sxt_imm_AGEX << 12);
+
        //  ...
 
 	 endcase 
    
   end 
+
+  
 
 // branch target needs to be computed here 
 // computed branch target needs to send to other pipeline stages (pctarget_AGEX)
