@@ -110,8 +110,12 @@ module FE_STAGE(
      else  
         begin 
          // this is just an example. you need to expand the contents of if/else
-         if  (stall_pipe_FE && br_cond_AGEX ) begin //the first stall needs the PC-->FE latch to be firmly latched on branch
-          FE_latch <= FE_latch_contents;
+         if (PC_FE_latch >= `IMEMWORDS) begin
+          PC_FE_latch <= PC_FE_latch; 
+        end
+        else if  (stall_pipe_FE && br_cond_AGEX ) begin //the first stall needs the PC-->FE latch to be firmly latched on branch
+          //FE_latch <= FE_latch_contents;
+            FE_latch <= {`FE_latch_WIDTH{1'b0}};
          end
          else 
          if (stall_pipe_FE)

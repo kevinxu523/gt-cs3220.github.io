@@ -262,10 +262,16 @@ always @(*) begin
       (wr_reg_MEM && (regno_MEM == rd_DE || regno_MEM == rs1_DE || regno_MEM == rs2_DE)) ||
     (op_I_MEM == `BEQ_I) || (op_I_AGEX == `BEQ_I) || 
     (op_I_MEM == `BNE_I) || (op_I_AGEX == `BNE_I) ||
-    (op_I_MEM == `BGE_I) || (op_I_AGEX == `BGE_I)
+    (op_I_MEM == `BGE_I) || (op_I_AGEX == `BGE_I) ||
+    (op_I_MEM == `BGEU_I) || (op_I_AGEX == `BGEU_I) ||
+    (op_I_MEM == `BLT_I) || (op_I_AGEX == `BLT_I) ||
+    (op_I_MEM == `BLTU_I) || (op_I_AGEX == `BLTU_I) ||
+    (op_I_MEM == `JALR_I)|| (op_I_AGEX == `JALR_I)||
+    (op_I_MEM == `JAL_I) || (op_I_AGEX == `JAL_I)
     ) stall_DE = 1;
   else if(wr_reg_WB && (regno_WB == rd_DE || regno_WB == rs1_DE || regno_WB == rs2_DE ) 
-          || op_I_WB == `BEQ_I || op_I_WB == `BNE_I || op_I_WB == `BGE_I ) stall_DE = 0;
+          || op_I_WB == `BEQ_I || op_I_WB == `BNE_I || op_I_WB == `BGE_I || op_I_WB == `BGEU_I || op_I_WB == `BLT_I || op_I_WB == `BLTU_I
+          || op_I_WB == `JALR_I || op_I_WB == `JAL_I) stall_DE = 0;
 
   case (type_I_DE)
     `I_Type:
@@ -281,7 +287,17 @@ end
 assign regval1_DE = regs[rs1_DE];
 assign regval2_DE = regs[rs2_DE];
 
-assign wr_reg_DE = ((op_I_DE == `ADDI_I) || (op_I_DE == `ADD_I))? 1:0;
+assign wr_reg_DE = (
+  (op_I_DE == `ADDI_I) || (op_I_DE == `ADD_I) || (op_I_DE == `AND_I) || (op_I_DE == `ANDI_I) || (op_I_DE == `MUL_I) || 
+  (op_I_DE == `SUB_I) || (op_I_DE == `LUI_I) || 
+  (op_I_DE == `AUIPC_I) || (op_I_DE == `JAL_I) ||  
+  (op_I_DE == `SRAI_I) || (op_I_DE == `SRA_I) || 
+  (op_I_DE == `SRL_I) || (op_I_DE == `SRLI_I) || 
+  (op_I_DE == `SLL_I) || (op_I_DE == `SLLI_I) || 
+  (op_I_DE == `SLT_I) || (op_I_DE == `SLTU_I) || (op_I_DE == `SLTI_I) || (op_I_DE == `SLTIU_I) ||
+  (op_I_DE == `OR_I) || (op_I_DE == `ORI_I) || 
+  (op_I_DE == `XOR_I) || (op_I_DE == `XORI_I) || 
+  (op_I_DE == `JALR_I))? 1:0;
  
  /* this signal is passed from WB stage */ 
   wire wr_reg_WB; // is this instruction writing into a register file? 
@@ -290,7 +306,9 @@ assign wr_reg_DE = ((op_I_DE == `ADDI_I) || (op_I_DE == `ADD_I))? 1:0;
 
 
   // signals come from WB stage for register WB 
-  assign { wr_reg_WB, wregno_WB, regval_WB, op_I_WB} = from_WB_to_DE;  
+  assign { wr_reg_WB, wregno_WB, regval_WB, op_I_WB} = from_WB_to_DE;
+  wire [`DBITS-1:0] reg_write_val;
+  assign reg_write_val = (wregno_WB == 5'b00000) ? {`DBITS{1'b0}} : regval_WB;  
 
   reg stall_DE; 
   wire pipeline_stall_DE;
@@ -367,7 +385,7 @@ assign wr_reg_DE = ((op_I_DE == `ADDI_I) || (op_I_DE == `ADD_I))? 1:0;
       regs[31] <= {`DBITS{1'b0}};
     end
     else if(wr_reg_WB) 
-		  	regs[wregno_WB] <= regval_WB; 
+		  	regs[wregno_WB] <= reg_write_val; 
   end
 
 
