@@ -28,13 +28,31 @@ module AGEX_STAGE(
   wire [`DBITS-1:0] pcplus_AGEX; 
   wire [`IOPBITS-1:0] op_I_AGEX;
 
+  reg BHR;
+  reg [3:0] BTB_Index;
+  reg [31:0] tag;
+  reg valid;
+  reg [31:0] target;
+  reg [7:0] PHT_Index;
+  reg [1:0] PHT_Counter = PHT_Counter;
+  reg mispredict;
+  reg [`DBITS-1:0] Next_instr = Next_instr;
+  reg hit;
   reg br_cond_AGEX; // 1 means a branch condition is satisified. 0 means a branch condition is not satisifed 
   reg [`INSTBITS-1:0] branch_PC;
   assign from_AGEX_to_FE = {
                                 br_cond_AGEX,
-                                branch_PC
+                                branch_PC,
+                                BHR,
+                                BTB_Index,
+                                tag,
+                                valid,
+                                target,
+                                PHT_Index,
+                                mispredict,
+                                mispredict_instr
   };
-  //assign branch_PC = sxt_imm_AGEX + PC_AGEX;
+
 
  // **TODO: Complete the rest of the pipeline 
 wire [`DBITS-1:0] regval1_AGEX;
@@ -46,6 +64,9 @@ reg signed [`DBITS-1:0] imm_signed;
 wire [`REGNOBITS-1:0] rd_AGEX;
 wire wr_reg_AGEX;
 wire [`DBITS-1:0]sxt_imm_AGEX;
+reg [`DBITS-1:0] mispredict_instr;
+
+reg [7:0] BHR_Index = BHR_Index;
   always @ (*) begin
     regval1_AGEX_signed = regval1_AGEX;
     regval2_AGEX_signed = regval2_AGEX;
@@ -55,42 +76,180 @@ wire [`DBITS-1:0]sxt_imm_AGEX;
       `BEQ_I : begin 
         br_cond_AGEX = (regval1_AGEX == regval2_AGEX); // write correct code to check the branch condition. 
         branch_PC = sxt_imm_AGEX + PC_AGEX;
+
+        //insert to BTB by giving update values
+        target = branch_PC;
+        BHR = br_cond_AGEX;    //SINGLE BIT USED TO UPDATE THE BHR REGISTER ARRAY
+        tag = PC_AGEX[31:0];
+        BTB_Index = PC_AGEX[5:2];
+        valid = 1;
+        PHT_Index = BHR_Index;
+
+        //mispredict cond
+        if(br_cond_AGEX && !hit) begin
+          mispredict = 1;
+          mispredict_instr = target;
+        end
+        else if(!br_cond_AGEX && hit && PHT_Counter >= 2) begin
+          mispredict = 1;
+          mispredict_instr = PC_AGEX + 4;
+        end
+        else if(br_cond_AGEX && hit && PHT_Counter < 2) begin
+          mispredict = 1;
+          mispredict_instr = target;
+        end
+
+
       end
       
       `BNE_I : begin
         br_cond_AGEX = (regval1_AGEX != regval2_AGEX); // write correct code to check the branch condition. 
         branch_PC = sxt_imm_AGEX + PC_AGEX;
+        //insert to BTB by giving update values
+        target = branch_PC;
+        BHR = br_cond_AGEX;    //update the BHR
+        tag = PC_AGEX[31:0];
+        BTB_Index = PC_AGEX[5:2];
+        valid = 1;
+        PHT_Index = BHR_Index;
+        //mispredict cond
+        if(br_cond_AGEX && !hit) begin
+          mispredict = 1;
+          mispredict_instr = target;
+        end
+        else if(!br_cond_AGEX && hit && PHT_Counter >= 2) begin
+          mispredict = 1;
+          mispredict_instr = PC_AGEX + 4;
+        end
+        else if(br_cond_AGEX && hit && PHT_Counter < 2) begin
+          mispredict = 1;
+          mispredict_instr = target;
+        end
+
+
       end
 
       //`BLT_I : ...
       `BLT_I : begin
         br_cond_AGEX = (regval1_AGEX_signed < regval2_AGEX_signed);  //used the signed reg for negatives
         branch_PC = sxt_imm_AGEX + PC_AGEX;
+                //insert to BTB by giving update values
+        target = branch_PC;
+        BHR = br_cond_AGEX;    //update the BHR
+        tag = PC_AGEX[31:0];
+        BTB_Index = PC_AGEX[5:2];
+        valid = 1;
+        PHT_Index = BHR_Index;
+        //mispredict cond
+        if(br_cond_AGEX && !hit) begin
+          mispredict = 1;
+          mispredict_instr = target;
+        end
+        else if(!br_cond_AGEX && hit && PHT_Counter >= 2) begin
+          mispredict = 1;
+          mispredict_instr = PC_AGEX + 4;
+        end
+        else if(br_cond_AGEX && hit && PHT_Counter < 2) begin
+          mispredict = 1;
+          mispredict_instr = target;
+        end
       end
 
       `BGE_I : begin
         br_cond_AGEX = (regval1_AGEX_signed >= regval2_AGEX_signed);  //used the signed reg for negatives
         branch_PC = sxt_imm_AGEX + PC_AGEX;
+        //insert to BTB by giving update values
+        target = branch_PC;
+        BHR = br_cond_AGEX;    //update the BHR
+        tag = PC_AGEX[31:0];
+        BTB_Index = PC_AGEX[5:2];
+        valid = 1;
+        PHT_Index = BHR_Index;
+        //mispredict cond
+        if(br_cond_AGEX && !hit) begin
+          mispredict = 1;
+          mispredict_instr = target;
+        end
+        else if(!br_cond_AGEX && hit && PHT_Counter >= 2) begin
+          mispredict = 1;
+          mispredict_instr = PC_AGEX + 4;
+        end
+        else if(br_cond_AGEX && hit && PHT_Counter < 2) begin
+          mispredict = 1;
+          mispredict_instr = target;
+        end
+
+
       end
 
       `BGEU_I : begin
         br_cond_AGEX = (regval1_AGEX >= regval2_AGEX);  //used the unsigned reg for negatives
         branch_PC = sxt_imm_AGEX + PC_AGEX;
+        //insert to BTB by giving update values
+        target = branch_PC;
+        BHR = br_cond_AGEX;    //update the BHR
+        tag = PC_AGEX[31:0];
+        BTB_Index = PC_AGEX[5:2];
+        valid = 1;
+        PHT_Index = BHR_Index;
+        //mispredict cond
+        if(br_cond_AGEX && !hit) begin
+          mispredict = 1;
+          mispredict_instr = target;
+        end
+        else if(!br_cond_AGEX && hit && PHT_Counter >= 2) begin
+          mispredict = 1;
+          mispredict_instr = PC_AGEX + 4;
+        end
+        else if(br_cond_AGEX && hit && PHT_Counter < 2) begin
+          mispredict = 1;
+          mispredict_instr = target;
+        end
+
+
       end
 
       `BLTU_I : begin
         br_cond_AGEX = (regval1_AGEX < regval2_AGEX);  //used the unsigned reg for negatives
         branch_PC = sxt_imm_AGEX + PC_AGEX;
+        //insert to BTB by giving update values
+        target = branch_PC;
+        BHR = br_cond_AGEX;    //update the BHR
+        tag = PC_AGEX[31:0];
+        BTB_Index = PC_AGEX[5:2];
+        valid = 1;
+        PHT_Index = BHR_Index;
+        //mispredict cond
+        if(br_cond_AGEX && !hit) begin
+          mispredict = 1;
+          mispredict_instr = target;
+        end
+        else if(!br_cond_AGEX && hit && PHT_Counter >= 2) begin
+          mispredict = 1;
+          mispredict_instr = PC_AGEX + 4;
+        end
+        else if(br_cond_AGEX && hit && PHT_Counter < 2) begin
+          mispredict = 1;
+          mispredict_instr = target;
+        end
+
+
       end
 
       `JAL_I : begin 
         br_cond_AGEX = (regval1_AGEX == regval1_AGEX);
         branch_PC = sxt_imm_AGEX + PC_AGEX;
+
+
       end
 
       `JALR_I: begin 
         br_cond_AGEX = (regval1_AGEX == regval1_AGEX);
         branch_PC = (sxt_imm_AGEX + regval1_AGEX) & {{31{1'b1}}, 1'b0};
+ 
+
+
+
       end
 
       /*
@@ -99,14 +258,23 @@ wire [`DBITS-1:0]sxt_imm_AGEX;
       */
       default : begin
         br_cond_AGEX = 1'b0;
+        mispredict = 0;
+        mispredict_instr = 0;
+        target = 0;
+        BHR = 0;
+        tag = 0;
+        valid = 0;
+        BTB_Index = 0;
+        branch_PC = 0;
       end
     endcase
+
   end
 
 reg [`DBITS-1:0] aluout_AGEX;
 reg [`from_AGEX_to_DE_WIDTH-1:0] agex_de;
 reg [4:0] lower_hex_imm = sxt_imm_AGEX[4:0];
-assign from_AGEX_to_DE = {wr_reg_AGEX, rd_AGEX, regval1_AGEX, op_I_AGEX} ; 
+assign from_AGEX_to_DE = {wr_reg_AGEX, rd_AGEX, regval1_AGEX, op_I_AGEX, mispredict} ; 
  // compute ALU operations  (alu out or memory addresses)
  
   always @ (*) begin
@@ -181,6 +349,11 @@ assign from_AGEX_to_DE = {wr_reg_AGEX, rd_AGEX, regval1_AGEX, op_I_AGEX} ;
     `XORI_I: 
       aluout_AGEX = regval1_AGEX ^ sxt_imm_AGEX;
        //  ...
+    `SW_I:
+      aluout_AGEX = (regval1_AGEX + sxt_imm_AGEX) & ({{30{1'b1}}, 2'b00});
+    
+    `LW_I:
+      aluout_AGEX = (regval1_AGEX + sxt_imm_AGEX) & ({{30{1'b1}}, 2'b00});
 
 	 endcase 
    
@@ -211,7 +384,11 @@ end
                                   regval2_AGEX,
                                   sxt_imm_AGEX,
                                   rd_AGEX,
-                                  wr_reg_AGEX
+                                  wr_reg_AGEX,
+                                  BHR_Index,
+                                  PHT_Counter,
+                                  Next_instr,
+                                  hit
                                           // more signals might need
                                   } = from_DE_latch; 
     
@@ -224,19 +401,27 @@ end
                                 aluout_AGEX,
                                 rd_AGEX,
                                 wr_reg_AGEX,
-                                inst_count_AGEX
+                                inst_count_AGEX,
+                                regval2_AGEX
                                        // more signals might need
                                  }; 
  
   always @ (posedge clk ) begin
     if(reset) begin
+      
       AGEX_latch <= {`AGEX_latch_WIDTH{1'b0}};
       // might need more code here  
         end 
     else 
         begin
       // need to complete 
-            AGEX_latch <= AGEX_latch_contents ;
+            if(mispredict) begin
+              AGEX_latch <= {`AGEX_latch_WIDTH{1'b0}};
+              
+            end
+            else begin
+              AGEX_latch <= AGEX_latch_contents ;
+            end
         end 
   end
 

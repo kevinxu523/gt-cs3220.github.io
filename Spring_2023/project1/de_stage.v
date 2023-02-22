@@ -239,8 +239,8 @@ wire [`IOPBITS-1:0] op_I_AGEX;
 reg wr_reg_AGEX;
 //reg wr_reg_AGEX = from_AGEX_to_DE[`from_AGEX_to_DE_WIDTH - 1];
 reg[`REGNOBITS -1 : 0] regno_AGEX = from_AGEX_to_DE[`from_AGEX_to_DE_WIDTH - 2: `from_AGEX_to_DE_WIDTH - `REGNOBITS - 1];
-assign{wr_reg_AGEX, rd_AGEX, regval1_AGEX, op_I_AGEX} = from_AGEX_to_DE; 
-
+assign{wr_reg_AGEX, rd_AGEX, regval1_AGEX, op_I_AGEX, mispredict} = from_AGEX_to_DE; 
+reg mispredict = mispredict;
 
 wire wr_reg_WB; // is this instruction writing into a register file? 
 wire [`REGNOBITS-1:0] wregno_WB; // destination register ID 
@@ -260,13 +260,7 @@ always @(*) begin
   //stall logic here
   if( (wr_reg_AGEX && (regno_AGEX == rd_DE || regno_AGEX == rs1_DE || regno_AGEX == rs2_DE)) || 
       (wr_reg_MEM && (regno_MEM == rd_DE || regno_MEM == rs1_DE || regno_MEM == rs2_DE)) ||
-    (op_I_MEM == `BEQ_I) || (op_I_AGEX == `BEQ_I) || 
-    (op_I_MEM == `BNE_I) || (op_I_AGEX == `BNE_I) ||
-    (op_I_MEM == `BGE_I) || (op_I_AGEX == `BGE_I) ||
-    (op_I_MEM == `BGEU_I) || (op_I_AGEX == `BGEU_I) ||
-    (op_I_MEM == `BLT_I) || (op_I_AGEX == `BLT_I) ||
-    (op_I_MEM == `BLTU_I) || (op_I_AGEX == `BLTU_I) ||
-    (op_I_MEM == `JALR_I)|| (op_I_AGEX == `JALR_I)||
+  (op_I_MEM == `JALR_I)|| (op_I_AGEX == `JALR_I)||
     (op_I_MEM == `JAL_I) || (op_I_AGEX == `JAL_I)
     ) stall_DE = 1;
   else if(wr_reg_WB && (regno_WB == rd_DE || regno_WB == rs1_DE || regno_WB == rs2_DE ) 
@@ -297,7 +291,8 @@ assign wr_reg_DE = (
   (op_I_DE == `SLT_I) || (op_I_DE == `SLTU_I) || (op_I_DE == `SLTI_I) || (op_I_DE == `SLTIU_I) ||
   (op_I_DE == `OR_I) || (op_I_DE == `ORI_I) || 
   (op_I_DE == `XOR_I) || (op_I_DE == `XORI_I) || 
-  (op_I_DE == `JALR_I))? 1:0;
+  (op_I_DE == `JALR_I) || 
+  (op_I_DE == `LW_I))? 1:0;
  
  /* this signal is passed from WB stage */ 
   wire wr_reg_WB; // is this instruction writing into a register file? 
@@ -315,14 +310,21 @@ assign wr_reg_DE = (
   assign pipeline_stall_DE = stall_DE;
   assign from_DE_to_FE = {pipeline_stall_DE}; // pass the DE stage stall signal to FE stage 
 
-
+  reg [7:0] BHR_Index = BHR_Index;
+  reg [1:0] PHT_Counter = PHT_Counter;
+  reg [`DBITS-1:0] PC_FE_latch = PC_FE_latch;
+  reg hit;
 // decoding the contents of FE latch out. the order should be matched with the fe_stage.v 
   assign {
             valid_DE,
             inst_DE,
             PC_DE, 
             pcplus_DE,
-            inst_count_DE 
+            inst_count_DE,
+            BHR_Index,
+            PHT_Counter,
+            PC_FE_latch,
+            hit
             }  = from_FE_latch;  // based on the contents of the latch, you can decode the content 
 
 
@@ -340,7 +342,11 @@ assign wr_reg_DE = (
                                   regval2_DE,
                                   sxt_imm_DE,
                                   rd_DE,
-                                  wr_reg_DE
+                                  wr_reg_DE,
+                                  BHR_Index,
+                                  PHT_Counter,
+                                  PC_FE_latch,
+                                  hit
                                   // more signals might need
                                   }; 
 
@@ -396,6 +402,8 @@ always @ (posedge clk) begin // you need to expand this always block
      else begin  
       if (pipeline_stall_DE) 
         DE_latch <= {`DE_latch_WIDTH{1'b0}};
+      else if (mispredict)
+      DE_latch <= {`DE_latch_WIDTH{1'b0}};
       else
           DE_latch <= DE_latch_contents;
      end 

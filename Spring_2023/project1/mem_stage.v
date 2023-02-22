@@ -27,6 +27,7 @@ module MEM_STAGE(
   wire[`MEM_latch_WIDTH-1:0] MEM_latch_contents; 
 
 
+  wire [`DBITS-1:0] regval2_MEM;
 
   wire [`IOPBITS-1:0] op_I_MEM;
   wire [`DBITS-1:0] inst_count_MEM; 
@@ -55,7 +56,10 @@ module MEM_STAGE(
       
       dmem[memaddr_MEM[`DMEMADDRBITS-1:`DMEMWORDBITS]] <= wr_val_MEM; 
   end
-  `UNUSED_VAR (memaddr_MEM)
+  assign wr_mem_MEM = (op_I_MEM == `SW_I);
+  assign memaddr_MEM = aluout_MEM;
+  assign wr_val_MEM = regval2_MEM;
+
 
    
   `UNUSED_VAR (rd_mem_MEM)
@@ -70,7 +74,8 @@ module MEM_STAGE(
                                 aluout_MEM,
                                 wregno_MEM,
                                 wr_reg_MEM,
-                                inst_count_MEM
+                                inst_count_MEM,
+                                regval2_MEM
                                  // more signals might need
                                  } = from_AGEX_latch;  
  
@@ -84,7 +89,8 @@ module MEM_STAGE(
                                 aluout_MEM,
                                 wregno_MEM,
                                 wr_reg_MEM,
-                                inst_count_MEM
+                                inst_count_MEM,
+                                rd_val_MEM
                                         // more signals might need                 
    };
  

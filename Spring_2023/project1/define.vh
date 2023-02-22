@@ -18,7 +18,7 @@
 // address space is m 0x00000000 to 0x000fffff
   // [NOTICE] please note that both imem and dmem use the SAME "IDMEMINITFILE".
   // you need to change this line to change which test file to read 
-  `define IDMEMINITFILE "test/part3/xori.mem"
+  `define IDMEMINITFILE "test/part4/testall.mem"
   `define IMEMADDRBITS  16
   `define IMEMWORDBITS  2
   `define IMEMWORDS	  (1 << (`IMEMADDRBITS - `IMEMWORDBITS))
@@ -201,18 +201,18 @@
 
 /** please update the following define with your own values */ 
 
- `define FE_latch_WIDTH  (1 + `INSTBITS+`DBITS+ `DBITS + `DBITS)
-  `define DE_latch_WIDTH  (1 + `INSTBITS+`DBITS+`DBITS+ `IOPBITS + `DBITS + `DBITS +`DBITS + `DBITS + `REGNOBITS + 1)
+ `define FE_latch_WIDTH  (1 + `INSTBITS+`DBITS+ `DBITS + `DBITS + 8 + 2 + `DBITS + 1)
+  `define DE_latch_WIDTH  (1 + `INSTBITS+`DBITS+`DBITS+ `IOPBITS + `DBITS + `DBITS +`DBITS + `DBITS + `REGNOBITS + 1 + 8 + 2 + `DBITS + 1)
 
-  `define AGEX_latch_WIDTH   (1 + `INSTBITS+`DBITS+ `IOPBITS + `DBITS + `DBITS + `REGNOBITS + 1)
-  `define MEM_latch_WIDTH    (1 + `INSTBITS+`DBITS+ `IOPBITS  + `DBITS + `REGNOBITS + 1 + `DBITS) 
+  `define AGEX_latch_WIDTH   (1 + `INSTBITS+`DBITS+ `IOPBITS + `DBITS + `DBITS + `REGNOBITS + 1 + `DBITS)
+  `define MEM_latch_WIDTH    (1 + `INSTBITS+`DBITS+ `IOPBITS  + `DBITS + `REGNOBITS + 1 + `DBITS + `DBITS) 
 
   `define from_DE_to_FE_WIDTH  (1) 
-  `define from_AGEX_to_FE_WIDTH (1 + `INSTBITS)
+  `define from_AGEX_to_FE_WIDTH (144)
   `define from_MEM_to_FE_WIDTH (1)
   `define from_WB_to_FE_WIDTH (1)
 
-  `define from_AGEX_to_DE_WIDTH (1 + `REGNOBITS + `DBITS + `IOPBITS) 
+  `define from_AGEX_to_DE_WIDTH (1 + `REGNOBITS + `DBITS + `IOPBITS + 1) 
   `define from_MEM_to_DE_WIDTH  (1 + `REGNOBITS + `IOPBITS)
   `define from_WB_to_DE_WIDTH  (1 + `REGNOBITS + `DBITS + `IOPBITS ) 
 
