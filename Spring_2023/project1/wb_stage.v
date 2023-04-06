@@ -67,9 +67,7 @@ assign from_WB_to_DE = {wr_reg_WB, wregno_WB, regval_WB, op_I_WB} ;
 
   always @(negedge clk) begin
   if (reset) begin
-      for (int i = 0; i < `REGWORDS; ++i) begin
-        last_WB_value[i] <= 0;
-      end
+      last_WB_value <= 0;
     end else begin
     if (wr_reg_WB)
       last_WB_value[wregno_WB] <= regval_WB;

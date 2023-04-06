@@ -211,10 +211,7 @@ module FE_STAGE(
         begin 
             // INIT DATA STRUCTS
             BHR <= {8{1'b0}};
-            for(int j = 0; j < 256; j = j + 1)
-              PHT[j] = {{2'b10}};               //weekly taken
-            for(int i = 0; i < 16; i = i + 1)
-              BTB[i] = {65{1'b0}};
+            
 
             FE_latch <= {`FE_latch_WIDTH{1'b0}}; 
             inst_count_FE <= 1;  /* inst_count starts from 1 for easy human reading. 1st fetch instructions can have 1 */ 
